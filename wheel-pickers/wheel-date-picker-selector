@@ -1,0 +1,181 @@
+private fun isLeapYear(year: Int): Boolean {
+    return ((year % 4 == 0 && year % 100 != 0) || (year % 100 == 0 && year % 400 == 0))
+}
+
+@Composable
+fun DateOfBirthWheelPicker(onDateSelected: (LocalDate) -> Unit) {
+    val currentYear = Calendar.getInstance().get(Calendar.YEAR)
+    val minYear = currentYear - 100
+
+    val years = (minYear..currentYear).toList() // Lista de años, ajusta según tu lógica
+
+
+    val months = (1..12).toList() // Lista de meses, ajusta según tu lógica
+
+    var selectedMonth by remember { mutableIntStateOf(months.indexOf(months.first())) }
+    var selectedYear by remember { mutableIntStateOf(years.indexOf(years.last())) }
+
+    val days = (1..when (selectedMonth) {
+        1, 3, 5, 7, 8, 10, 12 -> 31
+        4, 6, 9, 11 -> 30
+        2 -> if (isLeapYear(selectedYear)) 29 else 28
+        else -> 31
+    }).toList()
+
+    var selectedDay by remember { mutableIntStateOf(days.indexOf(days.first())) }
+
+    Row(
+        modifier = Modifier
+            .fillMaxWidth()
+            .padding(16.dp),
+        horizontalArrangement = Arrangement.SpaceEvenly
+    ) {
+        Column(modifier = Modifier.weight(1f)) {
+            WheelPicker(
+                itemsList = days,
+                selectedItem = selectedDay,
+                onItemSelected = { selectedDay = it }
+            )
+        }
+        Column(modifier = Modifier.weight(1f)) {
+            WheelPicker(
+                itemsList = months,
+                selectedItem = selectedMonth,
+                onItemSelected = { selectedMonth = it }
+            )
+        }
+        Column(modifier = Modifier.weight(1f)) {
+            WheelPicker(
+                itemsList = years,
+                selectedItem = selectedYear,
+                onItemSelected = { selectedYear = it }
+            )
+        }
+    }
+
+    Spacer(modifier = Modifier.height(16.dp))
+
+    Text(
+        text = "Selected Date: $selectedDay/${selectedMonth}/$selectedYear",
+        fontSize = 20.sp,
+        modifier = Modifier.padding(16.dp)
+    )
+
+    Button(onClick = {
+        onDateSelected(LocalDate.of(selectedYear, selectedMonth, selectedDay))
+    }) {
+        Text(text = "Confirm Date")
+    }
+}
+
+@OptIn(ExperimentalFoundationApi::class)
+@Composable
+private fun WheelPicker(
+    itemsList: List<Int>,
+    selectedItem: Int,
+    onItemSelected: (Int) -> Unit,
+) {
+    val items = listOf("", *(itemsList).map { it.toString() }.toTypedArray(), "")
+    val visibleItemCount = 3
+    val itemHeight = 44.dp
+    val containerHeight = visibleItemCount * itemHeight
+    val listState = rememberLazyListState(initialFirstVisibleItemIndex = selectedItem)
+
+    val secondVisibleIndex = remember {
+        derivedStateOf { listState.firstVisibleItemIndex + 1 }
+    }
+    val isScrolling = listState.isScrollInProgress
+    val textColorAnimated = if (isScrolling) Color.Gray else Color.Black
+
+    if (!isScrolling) {
+        // Asegurarse de que el índice seleccionado esté dentro de los límites válidos
+        val newIndex = secondVisibleIndex.value - 1
+        if (newIndex in itemsList.indices) {
+            onItemSelected(itemsList[newIndex])
+        }
+    }
+
+    Box(
+        modifier = Modifier
+            .height(containerHeight)
+            .fillMaxWidth()
+    ) {
+        Box(
+            modifier = Modifier
+                .fillMaxWidth()
+                .zIndex(0f)
+        ) {
+            Column(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .height(containerHeight),
+                verticalArrangement = Arrangement.Center,
+                horizontalAlignment = Alignment.CenterHorizontally
+            ) {
+                Spacer(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .height(44.dp)
+                        .background(Color.LightGray.copy(alpha = 0.5f))
+                )
+            }
+        }
+
+        Box(
+            modifier = Modifier
+                .zIndex(1f)
+        ) {
+            Column(
+                modifier = Modifier
+                    .height(containerHeight),
+                verticalArrangement = Arrangement.Center,
+                horizontalAlignment = Alignment.CenterHorizontally
+            ) {
+                LazyColumn(
+                    state = listState,
+                    flingBehavior = rememberSnapFlingBehavior(listState),
+                    modifier = Modifier.fillMaxSize()
+                ) {
+                    itemsIndexed(items) { index, item ->
+                        PickerItem(
+                            itemHeight,
+                            item,
+                            isScrolling,
+                            index,
+                            secondVisibleIndex,
+                            textColorAnimated
+                        )
+                    }
+                }
+            }
+        }
+    }
+}
+
+
+@Composable
+private fun PickerItem(
+    itemHeight: Dp,
+    item: String,
+    isScrolling: Boolean,
+    index: Int,
+    secondVisibleIndex: State<Int>,
+    textColorAnimated: Color,
+) {
+    Row(
+        modifier = Modifier
+            .height(itemHeight)
+            .fillMaxWidth(),
+        verticalAlignment = Alignment.CenterVertically
+    ) {
+        Text(
+            text = item,
+            modifier = Modifier.fillMaxWidth(),
+            style = TextStyle(fontSize = 20.sp),
+            maxLines = 1,
+            overflow = TextOverflow.Ellipsis,
+            color = if (!isScrolling && index == secondVisibleIndex.value) DarkGold else textColorAnimated,
+            textAlign = TextAlign.Center
+        )
+    }
+}
