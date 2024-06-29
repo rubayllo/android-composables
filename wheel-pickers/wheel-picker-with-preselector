@@ -1,0 +1,131 @@
+@OptIn(ExperimentalFoundationApi::class)
+@Composable
+fun WheelPicker() {
+    // Lista de elementos con ítems vacíos al principio y al final
+    val minHeight = 100
+    val maxHeight = 230
+
+    val items = listOf("", *(minHeight..maxHeight).map { it.toString() }.toTypedArray(), "")
+    val visibleItemCount = 3
+    val itemHeight = 44.dp
+    val containerHeight = visibleItemCount * itemHeight
+    val listState = rememberLazyListState(initialFirstVisibleItemIndex = 0)
+
+    // Índice del segundo ítem visible
+    val secondVisibleIndex = remember {
+        derivedStateOf { listState.firstVisibleItemIndex + 1 }
+    }
+
+    // Determina si el LazyColumn está desplazándose
+    val isScrolling = listState.isScrollInProgress
+    // Estado para manejar el color al pulsar
+    var isBoxClicked by remember { mutableStateOf(false) }
+
+    val textColorAnimated = if (isScrolling ) Color.Gray else Black
+
+
+    // Verifica si el LazyColumn está desplazándose y muestra el valor del índice del segundo ítem visible
+    if (!isScrolling) {
+        Log.d("Picker", secondVisibleIndex.value.toString())
+        Log.d("Picker", items[secondVisibleIndex.value])
+    }
+
+    Box(
+        modifier = Modifier
+            .fillMaxSize()
+            .padding(vertical = 16.dp)
+    ) {
+        // Box debajo (con una fila roja en la mitad)
+        Box(
+            modifier = Modifier
+                .fillMaxWidth()
+                .zIndex(0f)
+        ) {
+            Column(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .height(containerHeight),
+                verticalArrangement = Arrangement.Center,
+                horizontalAlignment = Alignment.CenterHorizontally
+            ) {
+                Spacer(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .height(44.dp)
+                        .background(Color.LightGray.copy(alpha = 0.5f))
+                )
+            }
+        }
+
+        // Box principal encima (con la lista de ítems)
+        Box(
+            modifier = Modifier
+                .fillMaxWidth()
+                .zIndex(1f)
+        ) {
+            Column(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .height(containerHeight),
+                verticalArrangement = Arrangement.Center,
+                horizontalAlignment = Alignment.CenterHorizontally
+            ) {
+                LazyColumn(
+                    state = listState,
+                    flingBehavior = rememberSnapFlingBehavior(listState),
+                    modifier = Modifier.fillMaxSize()
+                ) {
+                    itemsIndexed(items) { index, item ->
+                        PickerItem(
+                            itemHeight,
+                            item,
+                            isScrolling,
+                            index,
+                            secondVisibleIndex,
+                            textColorAnimated
+                        )
+                    }
+                }
+            }
+        }
+    }
+    Row(
+        modifier = Modifier
+            .fillMaxWidth()
+            .padding(bottom = 36.dp),
+        horizontalArrangement = Arrangement.SpaceEvenly
+    ) {
+        Text(
+            text = "${items[secondVisibleIndex.value]} cm",
+            fontSize = 20.sp,
+        )
+    }
+}
+
+@Composable
+private fun PickerItem(
+    itemHeight: Dp,
+    item: String,
+    isScrolling: Boolean,
+    index: Int,
+    secondVisibleIndex: State<Int>,
+    textColorAnimated: Color,
+) {
+    Row(
+        modifier = Modifier
+            .height(itemHeight)
+            .fillMaxWidth(),
+        verticalAlignment = Alignment.CenterVertically
+    ) {
+        // Texto del ítem con color animado
+        Text(
+            text = item,
+            modifier = Modifier.fillMaxWidth(),
+            style = TextStyle(fontSize = 20.sp),
+            maxLines = 1,
+            overflow = TextOverflow.Ellipsis,
+            color = if (!isScrolling && index == secondVisibleIndex.value) DarkGold else textColorAnimated,
+            textAlign = TextAlign.Center
+        )
+    }
+}
